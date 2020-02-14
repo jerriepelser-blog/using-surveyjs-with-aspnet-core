@@ -1,0 +1,52 @@
+﻿@page
+@using Microsoft.AspNetCore.Antiforgery
+@using Microsoft.AspNetCore.Routing
+@model CompleteSurveyModel
+@inject LinkGenerator LinkGenerator
+@inject IAntiforgery Xsrf
+
+<div class="row">
+    <div class="col">
+        <div id="surveyContainer"></div>
+    </div>
+</div>
+
+@section Scripts
+{
+    <script src="https://surveyjs.azureedge.net/1.5.8/survey.jquery.min.js"></script>
+    <script>
+        var surveyJSON = { title: "Tell us, what technologies do you use?", questions: [
+            { type: "radiogroup", choices: [ "Yes", "No" ], isRequired: true, name: "frameworkUsing",title: "Do you use any front-end framework like Bootstrap?" },
+            { type: "checkbox", choices: ["Bootstrap","Foundation"], hasOther: true, isRequired: true, name: "framework", title: "What front-end framework do you use?", visibleIf: "{frameworkUsing} = 'Yes'" },
+            { type: "radiogroup", choices: ["Yes","No"],isRequired: true, name: "mvvmUsing", title: "Do you use any MVVM framework?" },
+            { type: "checkbox", choices: [ "AngularJS", "KnockoutJS", "React" ], hasOther: true, isRequired: true, name: "mvvm", title: "What MVVM framework do you use?", visibleIf: "{mvvmUsing} = 'Yes'" },
+            { type: "comment", name: "about", title: "Please tell us about your main requirements for Survey library" }
+         ]};
+        
+        Survey.StylesManager.applyTheme("bootstrap");
+        let survey = new Survey.Model(surveyJSON);
+        let surveyResult = @Html.Raw(Model.SurveyResult);
+        
+        $("#surveyContainer").Survey({
+            model:survey,
+            data: surveyResult,
+            onComplete:saveSurvey
+        });
+        
+        function saveSurvey(survey) {
+            $.ajax({
+                type: "POST",
+                url: '@LinkGenerator.GetUriByPage(HttpContext, null, "Save")',
+                data: {
+                    data: JSON.stringify(survey.data)
+                },
+                headers: {
+                    "RequestVerificationToken": "@Xsrf.GetAndStoreTokens(HttpContext).RequestToken"
+                }
+            })
+            .done(function() {
+                window.location.href = '/';
+            });
+        }
+    </script>
+}
